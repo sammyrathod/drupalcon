@@ -1,0 +1,5 @@
+name = Form Modal
+description = This module is use to open forms in popus
+core = 7.x
+package = Form Modal
+dependencies[] = ctools

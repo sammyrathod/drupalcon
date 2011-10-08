@@ -1,0 +1,183 @@
+<?php
+
+/**
+ * @file
+ * form_modal Module
+ */
+ 
+define('FORM_MODAL_BASE_PATH', drupal_get_path('module', 'form_modal'));
+define('FORM_MODAL_FORMS_DIR', FORM_MODAL_BASE_PATH . '/forms');
+
+
+/**
+ * Implements hook_menu
+ */
+function form_modal_menu()
+{
+    // Default settings page main link
+    $items['modal/add/booktest'] = array(
+        'title' => 'Add Haggada',
+        'page callback' => 'haggada_modal',
+        'access callback' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+
+    // Default settings page main link
+    $items['modal/test'] = array(
+        'title' => 'Modal test',
+        'page callback' => 'modal_test',
+        'access callback' => TRUE,
+    );
+
+  $items['modal/debug/%'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'modal_debug',
+    'page arguments' => array(2),
+    'access callback' => TRUE,
+  );
+  $items['modal/form/%'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'form_modal_form_get_form',
+    'page arguments' => array(2),
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function form_modal_get_form($form_id) {
+  module_load_include('inc', 'form_modal', 'forms/' . $form_id);
+ 
+  ctools_include('modal');
+  ctools_include('ajax');
+   
+  $form_state = array(
+    'title' => t('Add Haggadah'),
+    'ajax' => TRUE,
+  );
+  
+  $output = ctools_modal_form_wrapper($form_id . '_form', $form_state);
+  if (!empty($form_state['executed'])) {
+      // We'll just overwrite the form output if it was successful.
+    $output = array();
+    $output[] = ctools_modal_command_display(t('Login Success'), '<div class="modal-message">Login successful.</div>');
+  }
+  print ajax_render($output);
+  exit();
+}
+
+function modal_debug($id) {
+  form_modal_get_form('haggadah');
+}
+
+/**
+ * A modal login callback.
+ */
+function haggada_modal()
+{
+    ctools_include('modal');
+    ctools_include('ajax');
+    $form_state = array(
+        'title' => t('Add Haggadh'),
+        'ajax' => TRUE,
+    );
+
+  module_load_include('inc', 'form_modal', 'form_modal.form');
+    $output = ctools_modal_form_wrapper('modal_form_custom', $form_state);
+
+    if (!empty($form_state['executed']))
+    {
+        // We'll just overwrite the form output if it was successful.
+        $output = array();
+
+        $output[] = ctools_modal_command_display(t('Login Success'), '<div class="modal-message">Login successful.</div>');
+    }
+
+    print ajax_render($output);
+    exit;
+}
+
+function modal_test()
+{   
+    global $user;
+
+    // Include the CTools tools that we need.
+    ctools_include('ajax');
+    ctools_include('modal');
+
+    // Add CTools' javascript to the page.
+    ctools_modal_add_js();
+
+    // Create our own javascript that will be used to theme a modal.
+    $sample_style = array(
+        'ctools-sample-style' => array(
+            'modalSize' => array(
+                'type' => 'fixed',
+                'width' => 800,
+                'height' => 500,
+                'addWidth' => 20,
+                'addHeight' => 15,
+            ),
+            'modalOptions' => array(
+                'opacity' => .5,
+                'background-color' => '#000',
+            ),
+            'animation' => 'fadeIn',
+//            'modalTheme' => 'CToolsSampleModal',
+            'throbber' => theme('image', array('path' => ctools_image_path('ajax-loader.gif', 'ctools_ajax_sample'), 'alt' => t('Loading...'), 'title' => t('Loading'))),
+        ),
+    );
+
+    drupal_add_js($sample_style, 'setting');
+
+    // Since we have our js, css and images in well-known named directories,
+    // CTools makes it easy for us to just use them without worrying about
+    // using drupal_get_path() and all that ugliness.
+    ctools_add_js('ctools-ajax-sample', 'ctools_ajax_sample');
+    ctools_add_css('ctools-ajax-sample', 'ctools_ajax_sample');
+
+    // Create a list of clickable links.
+    $links = array();
+
+    $links[] = ctools_modal_text_button(t('Modal Login (custom style)'), 'modal/debug/haggadah', t('Login via modal'), 'ctools-modal-ctools-sample-style');
+
+    $output = theme('item_list', array('items' => $links, 'title' => t('Actions')));
+
+    return array('markup' => array('#markup' => $output));
+}
+
+function test_form()
+{
+    global $user;
+
+    // create an empty $form_state array
+    $form_state = array();
+
+    // define the content type of the form you'd like to load
+    $nodeType = 'book';
+
+    // create a string of the $form_id
+    $form_id = $nodeType . '_node_form';
+
+    // create a basic $node array
+    $node = (object) array(
+                'uid' => $user->uid,
+                'name' => (isset($user->name) ? $user->name : ''),
+                'type' => $nodeType,
+                'language' => 'und'
+    );
+
+    $form_state['build_info']['args'] = array($node);
+    $form_state['method'] = "post";
+
+    $form = drupal_retrieve_form($form_id, $form_state, $node);
+
+    // prepare the $form
+    drupal_prepare_form($form_id, $form, $form_state);
+    return $form;  
+
+//       or    
+//    $form_state = array();
+//    $form_state['build_info']['args'] = array($node);
+//    form_load_include($form_state, 'inc', 'node', 'node.pages');
+//    return drupal_build_form($form_id, $form_state);
+}
